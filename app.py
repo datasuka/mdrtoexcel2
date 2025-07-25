@@ -31,14 +31,14 @@ if uploaded_file:
 
     for line in lines:
         line = line.strip()
-        if re.match(r"\d{2}/\d{2}/\d{4}", line):
+        if re.match(r"\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2}", line):
             if buffer and "tanggal" in current:
                 nums = re.findall(r"[-\d,.]+", buffer[-1])[-3:]
                 ket = " ".join(buffer[:-1]) if len(buffer) > 1 else buffer[0]
                 if len(nums) == 3:
                     rows.append({
                         "Nomor Rekening": no_rekening,
-                        "Tanggal": current["tanggal"],
+                        "Tanggal": current["tanggal"].split()[0],
                         "Keterangan": ket.strip(),
                         "Debit": float(nums[0].replace(",", "")) if nums[0] != "0.00" else 0.0,
                         "Kredit": float(nums[1].replace(",", "")) if nums[1] != "0.00" else 0.0,
@@ -56,7 +56,7 @@ if uploaded_file:
         if len(nums) == 3:
             rows.append({
                 "Nomor Rekening": no_rekening,
-                "Tanggal": current["tanggal"],
+                "Tanggal": current["tanggal"].split()[0],
                 "Keterangan": ket.strip(),
                 "Debit": float(nums[0].replace(",", "")) if nums[0] != "0.00" else 0.0,
                 "Kredit": float(nums[1].replace(",", "")) if nums[1] != "0.00" else 0.0,
