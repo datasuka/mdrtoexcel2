@@ -29,20 +29,28 @@ if uploaded_file:
     current = {}
     buffer = []
 
+    def extract_angka_and_ket(buf):
+        for i in [-1, -2]:
+            if abs(i) <= len(buf):
+                nums = re.findall(r"[-\d,.]+", buf[i])
+                if len(nums) >= 3:
+                    keterangan = " ".join(buf[:i]) if i != -len(buf) else buf[0]
+                    return nums[-3:], keterangan
+        return None, None
+
     for line in lines:
         line = line.strip()
         if re.match(r"\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2}", line):
             if buffer and "tanggal" in current:
-                nums = re.findall(r"[-\d,.]+", buffer[-1])[-3:]
-                ket = " ".join(buffer[:-1]) if len(buffer) > 1 else buffer[0]
-                if len(nums) == 3:
+                angka, ket = extract_angka_and_ket(buffer)
+                if angka:
                     rows.append({
                         "Nomor Rekening": no_rekening,
                         "Tanggal": current["tanggal"].split()[0],
                         "Keterangan": ket.strip(),
-                        "Debit": float(nums[0].replace(",", "")) if nums[0] != "0.00" else 0.0,
-                        "Kredit": float(nums[1].replace(",", "")) if nums[1] != "0.00" else 0.0,
-                        "Saldo": float(nums[2].replace(",", "")),
+                        "Debit": float(angka[0].replace(",", "")) if angka[0] != "0.00" else 0.0,
+                        "Kredit": float(angka[1].replace(",", "")) if angka[1] != "0.00" else 0.0,
+                        "Saldo": float(angka[2].replace(",", "")),
                         "Currency": mata_uang
                     })
             current = {"tanggal": line.strip()}
@@ -51,16 +59,15 @@ if uploaded_file:
             buffer.append(line)
 
     if buffer and "tanggal" in current:
-        nums = re.findall(r"[-\d,.]+", buffer[-1])[-3:]
-        ket = " ".join(buffer[:-1]) if len(buffer) > 1 else buffer[0]
-        if len(nums) == 3:
+        angka, ket = extract_angka_and_ket(buffer)
+        if angka:
             rows.append({
                 "Nomor Rekening": no_rekening,
                 "Tanggal": current["tanggal"].split()[0],
                 "Keterangan": ket.strip(),
-                "Debit": float(nums[0].replace(",", "")) if nums[0] != "0.00" else 0.0,
-                "Kredit": float(nums[1].replace(",", "")) if nums[1] != "0.00" else 0.0,
-                "Saldo": float(nums[2].replace(",", "")),
+                "Debit": float(angka[0].replace(",", "")) if angka[0] != "0.00" else 0.0,
+                "Kredit": float(angka[1].replace(",", "")) if angka[1] != "0.00" else 0.0,
+                "Saldo": float(angka[2].replace(",", "")),
                 "Currency": mata_uang
             })
 
