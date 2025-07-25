@@ -25,6 +25,10 @@ if uploaded_file:
     no_rekening = norekening.group(1) if norekening else "-"
     mata_uang = currency.group(1) if currency else "-"
 
+    def parse_amount(val):
+        val = val.replace(".", "").replace(",", ".")
+        return float(val) if val not in ["-", "", None] else 0.0
+
     rows = []
     current = {}
     buffer = []
@@ -32,7 +36,7 @@ if uploaded_file:
     def extract_angka_and_ket(buf):
         for i in [-1, -2]:
             if abs(i) <= len(buf):
-                nums = re.findall(r"[-\d,.]+", buf[i])
+                nums = re.findall(r"[-\d.,]+", buf[i])
                 if len(nums) >= 3:
                     keterangan = " ".join(buf[:i]) if i != -len(buf) else buf[0]
                     return nums[-3:], keterangan
@@ -48,9 +52,9 @@ if uploaded_file:
                         "Nomor Rekening": no_rekening,
                         "Tanggal": current["tanggal"].split()[0],
                         "Keterangan": ket.strip(),
-                        "Debit": float(angka[0].replace(",", "")) if angka[0] != "0.00" else 0.0,
-                        "Kredit": float(angka[1].replace(",", "")) if angka[1] != "0.00" else 0.0,
-                        "Saldo": float(angka[2].replace(",", "")),
+                        "Debit": parse_amount(angka[0]) if angka[0] != "0.00" else 0.0,
+                        "Kredit": parse_amount(angka[1]) if angka[1] != "0.00" else 0.0,
+                        "Saldo": parse_amount(angka[2]),
                         "Currency": mata_uang
                     })
             current = {"tanggal": line.strip()}
@@ -65,9 +69,9 @@ if uploaded_file:
                 "Nomor Rekening": no_rekening,
                 "Tanggal": current["tanggal"].split()[0],
                 "Keterangan": ket.strip(),
-                "Debit": float(angka[0].replace(",", "")) if angka[0] != "0.00" else 0.0,
-                "Kredit": float(angka[1].replace(",", "")) if angka[1] != "0.00" else 0.0,
-                "Saldo": float(angka[2].replace(",", "")),
+                "Debit": parse_amount(angka[0]) if angka[0] != "0.00" else 0.0,
+                "Kredit": parse_amount(angka[1]) if angka[1] != "0.00" else 0.0,
+                "Saldo": parse_amount(angka[2]),
                 "Currency": mata_uang
             })
 
