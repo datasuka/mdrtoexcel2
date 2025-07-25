@@ -14,8 +14,12 @@ if uploaded_file:
     pdf_bytes = uploaded_file.read()
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     text = "\n".join(page.get_text().strip() for page in doc)
-    lines = text.splitlines()
 
+    st.subheader("🔍 Isi Mentah PDF:")
+    with st.expander("Lihat isi teks hasil ekstraksi PDF"):
+        st.code(text)
+
+    lines = text.splitlines()
     norekening = re.search(r'Account No\.\s*(\d+)', text)
     currency = re.search(r'Currency\s+([A-Z]+)', text)
     no_rekening = norekening.group(1) if norekening else "-"
