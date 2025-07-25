@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import fitz  # PyMuPDF
@@ -16,34 +15,40 @@ if uploaded_file:
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     text = "\n".join(page.get_text() for page in doc)
 
-    # Ekstrak nomor rekening dan mata uang
     norekening = re.search(r'Account No\.\s*(\d+)', text)
     currency = re.search(r'Currency\s+([A-Z]+)', text)
     no_rekening = norekening.group(1) if norekening else "-"
     mata_uang = currency.group(1) if currency else "-"
 
-    # Ekstrak transaksi
     transaksi_pattern = re.findall(
-        r"(\d{2}/\d{2}/\d{4})\s+\d{2}:\d{2}:\d{2}(.*?)\s+([\-\d,.]+)\s+([\-\d,.]+)\s+([\-\d,.]+)",
+        r"(\d{2}/\d{2}/\d{4})\s+\d{2}:\d{2}:\d{2}(.*?)(?=\d{2}/\d{2}/\d{4}|\Z)",
         text,
         re.DOTALL,
     )
 
     rows = []
-    for tgl, ket, debit, kredit, saldo in transaksi_pattern:
-        # Gabungkan dan bersihkan keterangan
-        keterangan = " ".join(ket.strip().splitlines()).strip()
+    for tgl, blok in transaksi_pattern:
+        lines = [line.strip() for line in blok.strip().splitlines() if line.strip()]
+        if len(lines) < 2:
+            continue
+
+        keterangan = " ".join(lines[:-1])
+        angka = re.findall(r"[-\d,.]+", lines[-1])
+        if len(angka) < 3:
+            continue
+
+        debit, kredit, saldo = angka[-3:]
 
         def parse_amount(val):
-            val = val.replace(",", "")
-            return float(val) if val not in ["-", ""] else 0.0
+            val = val.replace(",", "").replace(".", "")
+            return float(val) if val not in ["-", "", None] else 0.0
 
         rows.append({
             "Nomor Rekening": no_rekening,
             "Tanggal": pd.to_datetime(tgl, format="%d/%m/%Y").strftime("%d/%m/%Y"),
             "Keterangan": keterangan,
-            "Debit": parse_amount(debit),
-            "Kredit": parse_amount(kredit),
+            "Debit": parse_amount(debit) if debit != "0.00" else 0.0,
+            "Kredit": parse_amount(kredit) if kredit != "0.00" else 0.0,
             "Saldo": parse_amount(saldo),
             "Currency": mata_uang,
         })
@@ -51,14 +56,13 @@ if uploaded_file:
     df = pd.DataFrame(rows)
 
     if not df.empty:
-        df["Saldo Awal"] = df["Saldo"].iloc[0] - df["Kredit"].iloc[0] + df["Debit"].iloc[0]
+        df["Saldo Awal"] = df.iloc[0]["Saldo"] - df.iloc[0]["Kredit"] + df.iloc[0]["Debit"]
         df = df[[
             "Nomor Rekening", "Tanggal", "Keterangan", "Debit", "Kredit", "Saldo", "Currency", "Saldo Awal"
         ]]
         st.success("Berikut data hasil ekstraksi:")
         st.dataframe(df, use_container_width=True)
 
-        # Download button
         output = BytesIO()
         df.to_excel(output, index=False)
         st.download_button(
